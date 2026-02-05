@@ -115,6 +115,16 @@ Created by **GinjeesPacks**
 
 If you redistribute or modify this project, please keep the original credit.
 
+---
+
+## License
+
+LightFlip source code is licensed under the MIT License.
+
+The LightFlip name, icon, and branding assets are not covered by the MIT License and may not be reused without permission.
+Copyright © 2026 GinjeesPacks.
+
+
 
 
 
