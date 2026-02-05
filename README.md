@@ -1,4 +1,9 @@
-﻿# LightFlip
+# LightFlip
+
+[![Latest Version](https://img.shields.io/github/v/release/GinjeesPacks/LightFlip?display_name=tag)](../../releases/latest)
+[![Download Latest](https://img.shields.io/badge/Download-Latest%20Release-green)](../../releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/n8WnKWMzhJ)
 
 LightFlip is a lightweight Windows tray utility that lets you **instantly switch display color/brightness profiles per game or app** using a global hotkey. It detects the active foreground application and applies the matching display gamma/color profile in real time — no monitor OSD or GPU panel tweaking required.
 
@@ -121,10 +126,16 @@ If you redistribute or modify this project, please keep the original credit.
 
 LightFlip source code is licensed under the MIT License.
 
-The LightFlip name, icon, and branding assets are not covered by the MIT License and may not be reused without permission.
+The LightFlip name, icon, and branding assets are not covered by the MIT License and may not be reused without permission.  
 Copyright © 2026 Caleb Cook.
 
+---
 
+## 💬 Join the Discord
+
+[![Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/n8WnKWMzhJ)
+
+Join the GinjeesPacks Discord for support, updates, and releases.
 
 
 
