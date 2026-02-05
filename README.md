@@ -122,20 +122,20 @@ If you redistribute or modify this project, please keep the original credit.
 
 ---
 
+## 💬 Join the Discord
+
+[![Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/n8WnKWMzhJ)
+
+Join the GinjeesPacks Discord for support, updates, and releases.
+
+---
+
 ## License
 
 LightFlip source code is licensed under the MIT License.
 
 The LightFlip name, icon, and branding assets are not covered by the MIT License and may not be reused without permission.  
 Copyright © 2026 Caleb Cook.
-
----
-
-## 💬 Join the Discord
-
-[![Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/n8WnKWMzhJ)
-
-Join the GinjeesPacks Discord for support, updates, and releases.
 
 
 
