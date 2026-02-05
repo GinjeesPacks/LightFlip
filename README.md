@@ -111,7 +111,7 @@ LightFlip attempts to apply the profile to:
 
 ## 👤 Credits
 
-Created by **GinjeesPacks**
+Created by **Caleb Cook**
 
 If you redistribute or modify this project, please keep the original credit.
 
@@ -122,7 +122,7 @@ If you redistribute or modify this project, please keep the original credit.
 LightFlip source code is licensed under the MIT License.
 
 The LightFlip name, icon, and branding assets are not covered by the MIT License and may not be reused without permission.
-Copyright © 2026 GinjeesPacks.
+Copyright © 2026 Caleb Cook.
 
 
 
