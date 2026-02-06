@@ -8,7 +8,7 @@ namespace LightFlip
 {
     public sealed class AppConfig
     {
-        // GLOBAL hotkey (fallback when a game does not define its own hotkey)
+        
         public uint HotkeyModifiers { get; set; } = HotkeyMods.MOD_CONTROL | HotkeyMods.MOD_ALT;
         public uint HotkeyKey { get; set; } = (uint)Keys.G;
 
@@ -51,7 +51,7 @@ namespace LightFlip
                         cfg.Games ??= new List<GameProfile>();
                         cfg.LastSelectedGameExePath ??= string.Empty;
 
-                        // Safety: ensure nested objects exist (older configs)
+                        
                         foreach (var g in cfg.Games)
                         {
                             g.ExePath ??= string.Empty;
@@ -82,7 +82,7 @@ namespace LightFlip
         public ColorProfile Normal { get; set; } = ColorProfile.Neutral();
         public ColorProfile Bright { get; set; } = ColorProfile.Neutral();
 
-        // NEW: per-game hotkey (0 = use global hotkey)
+        
         public uint HotkeyModifiers { get; set; } = 0;
         public uint HotkeyKey { get; set; } = 0;
     }
@@ -93,7 +93,7 @@ namespace LightFlip
         public float Contrast { get; set; } = 50f;
         public float Gamma { get; set; } = 1.00f;
 
-        // NEW: -100..+100 (Cool -> Warm)
+        
         public float Temperature { get; set; } = 0f;
 
         public static ColorProfile Neutral()

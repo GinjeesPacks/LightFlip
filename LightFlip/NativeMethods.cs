@@ -7,8 +7,7 @@ namespace LightFlip
 {
     internal static class NativeMethods
     {
-        // GetAncestor() flags
-        // GA_ROOT returns the root window by walking up the parent chain.
+        
         private const uint GA_ROOT = 2;
 
         public static IntPtr GetForegroundWindowSafe()
@@ -16,8 +15,7 @@ namespace LightFlip
             try { return GetForegroundWindow(); } catch { return IntPtr.Zero; }
         }
 
-        // Returns the top-level (root) ancestor window for the current foreground window.
-        // This helps when the foreground window belongs to a child/overlay window.
+        
         public static IntPtr GetForegroundRootWindowSafe()
         {
             IntPtr hwnd = GetForegroundWindowSafe();

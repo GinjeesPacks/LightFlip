@@ -7,20 +7,17 @@ namespace LightFlip
     internal static class GammaRamp
     {
 
-        // Baseline cache (captured once per run)
+        
         private static bool _baselineCaptured = false;
         private static readonly Dictionary<string, RAMP> _baselineByDevice = new(StringComparer.OrdinalIgnoreCase);
         private static RAMP? _baselineDesktopRamp = null;
 
-        /// <summary>
-        /// Capture the current gamma ramps as the "baseline" so we can restore exactly what the user had.
-        /// Call once at startup (safe to call multiple times; it only captures once).
-        /// </summary>
+        
         public static void CaptureBaselineIfNeeded()
         {
             if (_baselineCaptured) return;
 
-            // Per active display device
+            
             foreach (string devName in EnumerateActiveDisplayDeviceNames())
             {
                 IntPtr hdc = CreateDC("DISPLAY", devName, null, IntPtr.Zero);
@@ -40,7 +37,7 @@ namespace LightFlip
                 }
             }
 
-            // Also capture the desktop DC ramp (some systems only respect this)
+            
             {
                 IntPtr hdc = GetDC(IntPtr.Zero);
                 if (hdc != IntPtr.Zero)
@@ -73,10 +70,7 @@ namespace LightFlip
             ApplyToAllActiveDevices(p);
         }
 
-        /// <summary>
-        /// Restore the gamma ramps to the captured baseline. If baseline was not captured,
-        /// falls back to Neutral (50/50/1.0).
-        /// </summary>
+        
         public static void RestoreBaselineAll()
         {
             if (!_baselineCaptured)
@@ -85,7 +79,7 @@ namespace LightFlip
                 return;
             }
 
-            // Restore per-device ramps where we have baselines
+            
             foreach (string devName in EnumerateActiveDisplayDeviceNames())
             {
                 if (!_baselineByDevice.TryGetValue(devName, out var ramp))
@@ -105,7 +99,7 @@ namespace LightFlip
                 }
             }
 
-            // Restore desktop DC too (best-effort)
+            
             if (_baselineDesktopRamp != null)
             {
                 IntPtr hdc = GetDC(IntPtr.Zero);
@@ -124,7 +118,7 @@ namespace LightFlip
             }
         }
 
-        // Keep your existing method name for compatibility, but now it restores baseline.
+        
         public static void ApplyToNeutralAll()
         {
             RestoreBaselineAll();
@@ -199,14 +193,14 @@ namespace LightFlip
             return true;
         }
 
-        // NEW: applies gamma + brightness/contrast + temperature tint (cool/warm)
+        
         private static RAMP BuildRamp(ColorProfile p)
         {
             float brightness = Clamp(p.Brightness, 0f, 100f);
             float contrast = Clamp(p.Contrast, 0f, 100f);
             float gamma = Clamp(p.Gamma, 0.2f, 5.0f);
 
-            // NEW: -100..+100 cool/warm
+            
             float temp = Clamp(p.Temperature, -100f, 100f);
             (double rMul, double gMul, double bMul) = TemperatureToRgbMultipliers(temp);
 
@@ -224,19 +218,19 @@ namespace LightFlip
             {
                 double x = i / 255.0;
 
-                // contrast + brightness
+                
                 x = (x - 0.5) * cFactor + 0.5 + bOffset;
 
                 if (x < 0) x = 0;
                 if (x > 1) x = 1;
 
-                // gamma
+               
                 x = Math.Pow(x, 1.0 / gamma);
 
-                // base value
+                
                 double baseValue = x * 65535.0;
 
-                // NEW: apply temperature tint per channel
+                
                 ramp.Red[i] = ToUShort(baseValue * rMul);
                 ramp.Green[i] = ToUShort(baseValue * gMul);
                 ramp.Blue[i] = ToUShort(baseValue * bMul);
@@ -252,14 +246,12 @@ namespace LightFlip
             return (ushort)(v + 0.5);
         }
 
-        // Simple warm/cool model:
-        // temp > 0 warms (boost red, slightly reduce blue)
-        // temp < 0 cools (boost blue, slightly reduce red)
+        
         private static (double r, double g, double b) TemperatureToRgbMultipliers(float temp)
         {
-            double t = temp / 100.0; // -1..+1
+            double t = temp / 100.0; 
 
-            // Caps keep it subtle and reduce clipping
+            
             double r = 1.0 + (t > 0 ? 0.35 * t : 0.15 * t);
             double b = 1.0 + (t < 0 ? -0.35 * t : -0.15 * t);
             double g = 1.0;

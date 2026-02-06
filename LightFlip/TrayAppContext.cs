@@ -26,18 +26,18 @@ namespace LightFlip
         private uint trackedGamePid;
         private GameProfile? trackedGameProfile;
 
-        // NEW: track what hotkey is currently registered
+        
         private uint registeredMods = 0;
         private uint registeredKey = 0;
 
-        // NEW: used to detect Alt+Tab / focus loss and revert gamma immediately
+        
         private bool trackedGameHadFocus = false;
 
         public TrayAppContext()
         {
             config = AppConfig.Load();
 
-            // Capture the user's current gamma ramps as baseline so "revert" restores their real default
+            
             GammaRamp.CaptureBaselineIfNeeded();
 
             StartupManager.Apply(config.StartWithWindows);
@@ -61,7 +61,7 @@ namespace LightFlip
 
             tray.DoubleClick += (s, e) => ShowSettings();
 
-            // Register initial hotkey (global by default)
+            
             EnsureHotkeyRegistered(null);
 
             pollTimer = new System.Windows.Forms.Timer();
@@ -77,7 +77,7 @@ namespace LightFlip
             UpdateTrayText();
         }
 
-        // Chooses per-game hotkey if set, else global, and only re-registers when it changes
+        
         private void EnsureHotkeyRegistered(GameProfile? profile)
         {
             uint mods = config.HotkeyModifiers;
@@ -173,7 +173,7 @@ namespace LightFlip
 
         private void PollForegroundGame()
         {
-            // If a tracked game exited, revert if requested and reset tracking
+            
             if (trackedGameProfile != null && trackedGamePid != 0)
             {
                 if (!ProcessByIdExists(trackedGamePid))
@@ -194,7 +194,7 @@ namespace LightFlip
                         try { GammaRamp.ApplyToNeutralAll(); } catch { }
                     }
 
-                    // If no game is active anymore, revert hotkey to global
+                    
                     EnsureHotkeyRegistered(null);
 
                     UpdateTrayText();
@@ -231,14 +231,12 @@ namespace LightFlip
 
             var found = FindProfileByExeOrProcessName(exeSafe, procNameSafe);
 
-            // NEW: If we switched away from the tracked game (Alt+Tab / focus loss),
-            // revert gamma immediately (if enabled).
+            
             if (trackedGameProfile != null && trackedGamePid != 0)
             {
                 bool nowFocusedIsTracked = (pid == trackedGamePid);
 
-                // ✅ More robust: revert whenever we are no longer focused on the tracked game
-                // (doesn't depend on trackedGameHadFocus being true)
+                
                 if (!nowFocusedIsTracked)
                 {
                     if (trackedGameProfile.RevertOnClose)
@@ -257,7 +255,7 @@ namespace LightFlip
                 trackedGameProfile = found;
                 trackedGameHadFocus = true;
 
-                // Register the per-game hotkey (if set) for this active profile
+                
                 EnsureHotkeyRegistered(activeProfile);
 
                 try
@@ -271,7 +269,7 @@ namespace LightFlip
             {
                 activeProfile = null;
 
-                // No active profile -> revert to global hotkey
+                
                 EnsureHotkeyRegistered(null);
             }
 
@@ -292,7 +290,7 @@ namespace LightFlip
 
         private GameProfile? FindProfileByExeOrProcessName(string? exePath, string? processName)
         {
-            // Prefer full path match when available (most precise).
+            
             if (!string.IsNullOrWhiteSpace(exePath))
             {
                 var byExe = FindProfileByExe(exePath);
@@ -300,7 +298,7 @@ namespace LightFlip
                     return byExe;
             }
 
-            // Fallback: process name match (needed for games that block QueryFullProcessImageName/OpenProcess).
+            
             if (!string.IsNullOrWhiteSpace(processName))
             {
                 string pn = processName.Trim().Trim('"');
@@ -382,11 +380,7 @@ private static string NormalizeExePath(string path)
 
                 TryApplyStartupSetting(config.StartWithWindows);
 
-                // IMPORTANT: The settings form passes us a *new* AppConfig instance.
-                // If the foreground game hasn't changed, PollForegroundGame() may early-return
-                // (pid/exe/name unchanged) and keep using the old GameProfile instance.
-                // That makes newly saved slider values appear to "do nothing" until you alt-tab.
-                // Reset cached foreground state so we re-resolve the active profile immediately.
+                
                 activePid = 0;
                 activeExePath = string.Empty;
                 activeProcessName = string.Empty;
@@ -395,10 +389,10 @@ private static string NormalizeExePath(string path)
                 trackedGameProfile = null;
                 trackedGameHadFocus = false;
 
-                // Force a refresh/apply right away.
+                
                 PollForegroundGame();
 
-                // Re-register based on current active profile (per-game override if present)
+                
                 EnsureHotkeyRegistered(activeProfile);
 
                 UpdateTrayText();
@@ -420,7 +414,7 @@ private static string NormalizeExePath(string path)
         {
             if (tray == null) return;
 
-            // Show the effective hotkey (per-game if active, else global)
+            
             uint mods = config.HotkeyModifiers;
             uint key = config.HotkeyKey;
 

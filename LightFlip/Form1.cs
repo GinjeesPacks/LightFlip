@@ -20,7 +20,7 @@ namespace LightFlip
         private uint capturedMods;
         private uint capturedKey;
 
-        // NEW: per-game hotkey capture
+        
         private uint capturedGameMods;
         private uint capturedGameKey;
 
@@ -44,7 +44,7 @@ namespace LightFlip
             mnuStartWithWindows.Checked = working.StartWithWindows;
             mnuStartMinimized.Checked = working.StartMinimized;
 
-            // Start per-game hotkey controls disabled until a profile is selected/loaded
+            
             txtGameHotkey.Enabled = false;
             btnClearGameHotkey.Enabled = false;
 
@@ -55,12 +55,12 @@ namespace LightFlip
         private void HookEvents()
         {
 
-            // Global hotkey capture
+            
             txtHotkey.KeyDown += TxtHotkey_KeyDown;
             txtHotkey.KeyUp += (s, e) => { e.Handled = true; e.SuppressKeyPress = true; };
             txtHotkey.MouseDown += (s, e) => { txtHotkey.Focus(); };
 
-            // Per-game hotkey capture
+            
             txtGameHotkey.KeyDown += TxtGameHotkey_KeyDown;
             txtGameHotkey.KeyUp += (s, e) => { e.Handled = true; e.SuppressKeyPress = true; };
             txtGameHotkey.MouseDown += (s, e) => { txtGameHotkey.Focus(); };
@@ -148,7 +148,7 @@ namespace LightFlip
             UpdateHotkeyText();
         }
 
-        // NEW: per-game hotkey capture
+        
         private void TxtGameHotkey_KeyDown(object? sender, KeyEventArgs e)
         {
             e.Handled = true;
@@ -179,7 +179,7 @@ namespace LightFlip
             txtHotkey.Text = HotkeyText.Format(capturedMods, capturedKey);
         }
 
-        // NEW
+        
         private void UpdateGameHotkeyText()
         {
             txtGameHotkey.Text = HotkeyText.Format(capturedGameMods, capturedGameKey);
@@ -262,7 +262,7 @@ namespace LightFlip
 
             chkRevertOnClose.Checked = g.RevertOnClose;
 
-            // NEW: load per-game hotkey
+            
             capturedGameMods = g.HotkeyModifiers;
             capturedGameKey = g.HotkeyKey;
 
@@ -304,7 +304,7 @@ namespace LightFlip
 
             chkRevertOnClose.Checked = true;
 
-            // NEW: reset per-game hotkey UI
+            
             capturedGameMods = 0;
             capturedGameKey = 0;
 
@@ -314,7 +314,7 @@ namespace LightFlip
 
             UpdateGameHotkeyText();
 
-            // NEW: reset sliders
+            
             if (trackBar1 != null) trackBar1.Value = 0;
             if (trackBar2 != null) trackBar2.Value = 0;
         }
@@ -343,7 +343,7 @@ namespace LightFlip
 
                     txtExePath.Text = newExe;
 
-                    // Only update the name if the exe actually changed
+                    
                     if (!string.Equals(newExe, oldExe, StringComparison.OrdinalIgnoreCase))
                         txtGameName.Text = Path.GetFileNameWithoutExtension(newExe);
                 }
@@ -435,7 +435,7 @@ namespace LightFlip
 
             existing.RevertOnClose = chkRevertOnClose.Checked;
 
-            // NEW: save per-game hotkey (0/0 means "use global")
+            
             if (chkUseGameHotkey.Checked && capturedGameKey != 0)
             {
                 existing.HotkeyModifiers = capturedGameMods;
@@ -485,7 +485,7 @@ namespace LightFlip
                     LastBright = g.LastBright,
                     RevertOnClose = g.RevertOnClose,
 
-                    // NEW: clone per-game hotkey
+                    
                     HotkeyModifiers = g.HotkeyModifiers,
                     HotkeyKey = g.HotkeyKey,
 
@@ -516,7 +516,7 @@ namespace LightFlip
             return value;
         }
 
-        // NEW: helper for trackbar int values
+        
         private int ClampToIntRange(int value, int min, int max)
         {
             if (value < min) return min;

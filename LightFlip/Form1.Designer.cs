@@ -29,7 +29,7 @@
         internal System.Windows.Forms.Button btnSaveGame;
         internal System.Windows.Forms.Button btnRemoveGame;
 
-        // per-game hotkey controls
+        
         private System.Windows.Forms.Label lblGameHotkey;
         internal System.Windows.Forms.CheckBox chkUseGameHotkey;
         internal System.Windows.Forms.TextBox txtGameHotkey;
@@ -138,18 +138,14 @@
             grpHotkey.SuspendLayout();
             SuspendLayout();
 
-            // 
-            // menuStrip1
-            // 
+            
             menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { mnuOptions });
             menuStrip1.Location = new System.Drawing.Point(0, 0);
             menuStrip1.Name = "menuStrip1";
             menuStrip1.Size = new System.Drawing.Size(820, 24);
             menuStrip1.TabIndex = 0;
 
-            // 
-            // mnuOptions
-            // 
+             
             mnuOptions.Name = "mnuOptions";
             mnuOptions.Size = new System.Drawing.Size(61, 20);
             mnuOptions.Text = "Options";
@@ -157,131 +153,95 @@
                 mnuMinimizeToTray, mnuStartWithWindows, mnuStartMinimized
             });
 
-            // 
-            // mnuMinimizeToTray
-            // 
+            
             mnuMinimizeToTray.Text = "Minimize to tray (close hides)";
             mnuMinimizeToTray.CheckOnClick = true;
 
-            // 
-            // mnuStartWithWindows
-            // 
+            
             mnuStartWithWindows.Text = "Start with Windows";
             mnuStartWithWindows.CheckOnClick = true;
 
-            // 
-            // mnuStartMinimized
-            // 
+             
             mnuStartMinimized.Text = "Start minimized to tray";
             mnuStartMinimized.CheckOnClick = true;
 
-            // 
-            // grpGames
-            // 
+            
             grpGames.Text = "Game Profiles";
             grpGames.Location = new System.Drawing.Point(12, 34);
             grpGames.Size = new System.Drawing.Size(796, 180);
 
-            // 
-            // lblGameSelect
-            // 
+            
             lblGameSelect.Text = "Saved games:";
             lblGameSelect.Location = new System.Drawing.Point(14, 26);
             lblGameSelect.Size = new System.Drawing.Size(90, 18);
 
-            // 
-            // cmbGames
-            // 
+           
             cmbGames.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             cmbGames.Location = new System.Drawing.Point(110, 23);
             cmbGames.Size = new System.Drawing.Size(420, 23);
 
-            // 
-            // btnRemoveGame
-            // 
+            
             btnRemoveGame.Text = "Remove";
             btnRemoveGame.Location = new System.Drawing.Point(540, 22);
             btnRemoveGame.Size = new System.Drawing.Size(90, 26);
 
-            // 
-            // btnSaveGame
-            // 
+            
             btnSaveGame.Text = "Save";
             btnSaveGame.Location = new System.Drawing.Point(636, 22);
             btnSaveGame.Size = new System.Drawing.Size(90, 26);
 
-            // 
-            // lblExe
-            // 
+            
             lblExe.Text = "Game .exe:";
             lblExe.Location = new System.Drawing.Point(14, 58);
             lblExe.Size = new System.Drawing.Size(90, 18);
 
-            // 
-            // txtExePath
-            // 
+            
             txtExePath.Location = new System.Drawing.Point(110, 55);
             txtExePath.Size = new System.Drawing.Size(520, 23);
 
-            // 
-            // btnBrowseExe
-            // 
+            
             btnBrowseExe.Text = "Browse";
             btnBrowseExe.Location = new System.Drawing.Point(636, 54);
             btnBrowseExe.Size = new System.Drawing.Size(90, 26);
 
-            // 
-            // lblName
-            // 
+            
             lblName.Text = "Name:";
             lblName.Location = new System.Drawing.Point(14, 90);
             lblName.Size = new System.Drawing.Size(90, 18);
 
-            // 
-            // txtGameName
-            // 
+             
             txtGameName.Location = new System.Drawing.Point(110, 87);
             txtGameName.Size = new System.Drawing.Size(420, 23);
 
-            // 
-            // lblGameHotkey
-            // 
+             
             lblGameHotkey.Location = new System.Drawing.Point(14, 118);
             lblGameHotkey.Name = "lblGameHotkey";
             lblGameHotkey.Size = new System.Drawing.Size(100, 18);
             lblGameHotkey.TabIndex = 9;
             lblGameHotkey.Text = "Per-game hotkey:";
 
-            // 
-            // chkUseGameHotkey
-            // 
+            
             chkUseGameHotkey.Location = new System.Drawing.Point(114, 118);
             chkUseGameHotkey.Name = "chkUseGameHotkey";
             chkUseGameHotkey.Size = new System.Drawing.Size(150, 20);
             chkUseGameHotkey.TabIndex = 10;
             chkUseGameHotkey.Text = "Use custom hotkey";
 
-            // 
-            // txtGameHotkey
-            // 
+            
             txtGameHotkey.Location = new System.Drawing.Point(270, 114);
             txtGameHotkey.Name = "txtGameHotkey";
             txtGameHotkey.ReadOnly = true;
             txtGameHotkey.Size = new System.Drawing.Size(260, 23);
             txtGameHotkey.TabIndex = 11;
 
-            // 
-            // btnClearGameHotkey
-            // 
+            
             btnClearGameHotkey.Location = new System.Drawing.Point(540, 112);
             btnClearGameHotkey.Name = "btnClearGameHotkey";
             btnClearGameHotkey.Size = new System.Drawing.Size(68, 26);
             btnClearGameHotkey.TabIndex = 12;
             btnClearGameHotkey.Text = "Clear";
 
-            // 
-            // chkRevertOnClose
-            // 
+            
             chkRevertOnClose.Text = "Revert to Normal on game close";
             chkRevertOnClose.Location = new System.Drawing.Point(16, 146);
             chkRevertOnClose.Size = new System.Drawing.Size(260, 20);
@@ -294,17 +254,15 @@
                 chkRevertOnClose
             });
 
-            // 
-            // grpNormal
-            // 
+            
             grpNormal.Text = "Normal";
             grpNormal.Location = new System.Drawing.Point(12, 222);
             grpNormal.Size = new System.Drawing.Size(398, 170);
 
-            // IMPORTANT: restores Brightness/Contrast/Gamma controls (old layout)
+            
             ConfigureProfileGroup(grpNormal, numNormalBrightness, numNormalContrast, numNormalGamma, lblNB, lblNC, lblNG);
 
-            // keep your slider + label (no moving)
+            
             label2.AutoSize = true;
             label2.Location = new System.Drawing.Point(256, 47);
             label2.Name = "label2";
@@ -324,17 +282,15 @@
             grpNormal.Controls.Add(label2);
             grpNormal.Controls.Add(trackBar1);
 
-            // 
-            // grpBright
-            // 
+            
             grpBright.Text = "Bright";
             grpBright.Location = new System.Drawing.Point(410, 222);
             grpBright.Size = new System.Drawing.Size(398, 170);
 
-            // IMPORTANT: restores Brightness/Contrast/Gamma controls (old layout)
+            
             ConfigureProfileGroup(grpBright, numBrightBrightness, numBrightContrast, numBrightGamma, lblBB, lblBC, lblBG);
 
-            // keep your slider + label (no moving)
+            
             label1.AutoSize = true;
             label1.Location = new System.Drawing.Point(254, 47);
             label1.Name = "label1";
@@ -354,9 +310,7 @@
             grpBright.Controls.Add(label1);
             grpBright.Controls.Add(trackBar2);
 
-            // 
-            // grpHotkey
-            // 
+            
             grpHotkey.Text = "Hotkey";
             grpHotkey.Location = new System.Drawing.Point(12, 400);
             grpHotkey.Size = new System.Drawing.Size(796, 78);
@@ -376,27 +330,21 @@
             grpHotkey.Controls.Add(txtHotkey);
             grpHotkey.Controls.Add(btnClearHotkey);
 
-            // 
-            // btnCancel
-            // 
+            
             btnCancel.Location = new System.Drawing.Point(622, 490);
             btnCancel.Name = "btnCancel";
             btnCancel.Size = new System.Drawing.Size(90, 28);
             btnCancel.TabIndex = 5;
             btnCancel.Text = "Cancel";
 
-            // 
-            // btnOk
-            // 
+            
             btnOk.Location = new System.Drawing.Point(718, 490);
             btnOk.Name = "btnOk";
             btnOk.Size = new System.Drawing.Size(90, 28);
             btnOk.TabIndex = 6;
             btnOk.Text = "OK";
 
-            // 
-            // Form1
-            // 
+            
             AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             ClientSize = new System.Drawing.Size(820, 530);
