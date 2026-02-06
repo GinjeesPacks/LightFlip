@@ -1,12 +1,41 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- App type -->
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
     <UseWindowsForms>true</UseWindowsForms>
+
+    <!-- Language / compiler -->
+    <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <!-- App metadata -->
     <ApplicationIcon>Flipcon.ico</ApplicationIcon>
+
+    <!-- ===== Publish settings: single EXE standalone ===== -->
+
+    <!-- Target platform -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+
+    <!-- No external .NET runtime required -->
+    <SelfContained>true</SelfContained>
+
+    <!-- Bundle everything into one file -->
+    <PublishSingleFile>true</PublishSingleFile>
+
+    <!-- Ensure native + content libs are bundled -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+
+    <!-- IMPORTANT: WinForms + P/Invoke safe -->
+    <PublishTrimmed>false</PublishTrimmed>
+
+    <!-- Cleaner output -->
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+
   </PropertyGroup>
+
 </Project>

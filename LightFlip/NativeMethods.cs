@@ -7,10 +7,41 @@ namespace LightFlip
 {
     internal static class NativeMethods
     {
+        // GetAncestor() flags
+        // GA_ROOT returns the root window by walking up the parent chain.
+        private const uint GA_ROOT = 2;
+
         public static IntPtr GetForegroundWindowSafe()
         {
             try { return GetForegroundWindow(); } catch { return IntPtr.Zero; }
         }
+
+        // Returns the top-level (root) ancestor window for the current foreground window.
+        // This helps when the foreground window belongs to a child/overlay window.
+        public static IntPtr GetForegroundRootWindowSafe()
+        {
+            IntPtr hwnd = GetForegroundWindowSafe();
+            if (hwnd == IntPtr.Zero) return IntPtr.Zero;
+
+            try
+            {
+                IntPtr root = GetAncestor(hwnd, GA_ROOT);
+                return root != IntPtr.Zero ? root : hwnd;
+            }
+            catch
+            {
+                return hwnd;
+            }
+        }
+
+        public static uint GetForegroundRootProcessId()
+        {
+            IntPtr hwnd = GetForegroundRootWindowSafe();
+            if (hwnd == IntPtr.Zero) return 0;
+            GetWindowThreadProcessId(hwnd, out uint pid);
+            return pid;
+        }
+
 
         public static uint GetForegroundProcessId()
         {
@@ -122,6 +153,9 @@ namespace LightFlip
 
         [DllImport("user32.dll")]
         private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
 
         [DllImport("user32.dll")]
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -6,352 +6,503 @@ using System.Linq;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
-namespace LightFlip {
-  internal sealed class TrayAppContext : ApplicationContext {
-    private NotifyIcon? tray;
-    private HotkeyHostForm? host;
-    private Form1? settingsForm;
+namespace LightFlip
+{
+    internal sealed class TrayAppContext : ApplicationContext
+    {
+        private NotifyIcon? tray;
+        private HotkeyHostForm? host;
+        private Form1? settingsForm;
 
-    private AppConfig config;
+        private AppConfig config;
 
-    private System.Windows.Forms.Timer pollTimer;
+        private System.Windows.Forms.Timer pollTimer;
 
-    private uint activePid;
-    private string activeExePath = string.Empty;
-    private string activeProcessName = string.Empty;
-    private GameProfile? activeProfile;
+        private uint activePid;
+        private string activeExePath = string.Empty;
+        private string activeProcessName = string.Empty;
+        private GameProfile? activeProfile;
 
-    private uint trackedGamePid;
-    private GameProfile? trackedGameProfile;
+        private uint trackedGamePid;
+        private GameProfile? trackedGameProfile;
 
-    public TrayAppContext() {
-      config = AppConfig.Load();
+        // NEW: track what hotkey is currently registered
+        private uint registeredMods = 0;
+        private uint registeredKey = 0;
 
-      TryApplyStartupSetting(config.StartWithWindows);
+        // NEW: used to detect Alt+Tab / focus loss and revert gamma immediately
+        private bool trackedGameHadFocus = false;
 
-      host = new HotkeyHostForm();
-      host.HotkeyPressed += (s, e) => ToggleForActiveGame();
+        public TrayAppContext()
+        {
+            config = AppConfig.Load();
 
-      tray = new NotifyIcon {
-        Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? SystemIcons.Application,
-        Visible = true,
-        Text = "LightFlip"
-      };
+            // Capture the user's current gamma ramps as baseline so "revert" restores their real default
+            GammaRamp.CaptureBaselineIfNeeded();
 
-      var menu = new ContextMenuStrip();
-      menu.Items.Add("Toggle", null, (s, e) => ToggleForActiveGame());
-      menu.Items.Add("Settings...", null, (s, e) => ShowSettings());
-      menu.Items.Add(new ToolStripSeparator());
-      menu.Items.Add("Exit", null, (s, e) => ExitApp());
-      tray.ContextMenuStrip = menu;
+            StartupManager.Apply(config.StartWithWindows);
 
-      tray.DoubleClick += (s, e) => ShowSettings();
+            host = new HotkeyHostForm();
+            host.HotkeyPressed += (s, e) => ToggleForActiveGame();
 
-      host.RegisterHotkey(config.HotkeyModifiers, config.HotkeyKey, showError: false);
+            tray = new NotifyIcon
+            {
+                Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? SystemIcons.Application,
+                Visible = true,
+                Text = "LightFlip"
+            };
 
-      pollTimer = new System.Windows.Forms.Timer();
-      pollTimer.Interval = 500;
-      pollTimer.Tick += (s, e) => PollForegroundGame();
-      pollTimer.Start();
+            var menu = new ContextMenuStrip();
+            menu.Items.Add("Toggle", null, (s, e) => ToggleForActiveGame());
+            menu.Items.Add("Settings...", null, (s, e) => ShowSettings());
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add("Exit", null, (s, e) => ExitApp());
+            tray.ContextMenuStrip = menu;
 
-      PollForegroundGame();
+            tray.DoubleClick += (s, e) => ShowSettings();
 
-      if (!(config.StartMinimized && config.MinimizeToTray))
-        ShowSettings();
+            // Register initial hotkey (global by default)
+            EnsureHotkeyRegistered(null);
 
-      UpdateTrayText();
-    }
+            pollTimer = new System.Windows.Forms.Timer();
+            pollTimer.Interval = 500;
+            pollTimer.Tick += (s, e) => PollForegroundGame();
+            pollTimer.Start();
 
-    private static void TryApplyStartupSetting(bool enabled) {
-      const string runKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
-      const string valueName = "LightFlip";
+            PollForegroundGame();
 
-      try {
-        using var key = Registry.CurrentUser.CreateSubKey(runKeyPath, writable: true);
-        if (key == null) return;
+            if (!(config.StartMinimized && config.MinimizeToTray))
+                ShowSettings();
 
-        if (enabled) {
-          string appDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LightFlip");
-
-          Directory.CreateDirectory(appDir);
-
-          string sourceDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
-          string targetExe = Path.Combine(appDir, "LightFlip.exe");
-
-          if (!string.Equals(sourceDir, appDir, StringComparison.OrdinalIgnoreCase)) {
-            CopyDirectory(sourceDir, appDir);
-          }
-
-          key.SetValue(valueName, $"\"{targetExe}\"");
-        } else {
-          if (key.GetValue(valueName) != null)
-            key.DeleteValue(valueName, throwOnMissingValue: false);
+            UpdateTrayText();
         }
-      } catch {
-      }
-    }
-    private static void CopyDirectory(string sourceDir, string destDir) {
-      foreach (string dir in Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories)) {
-        string rel = Path.GetRelativePath(sourceDir, dir);
-        string dst = Path.Combine(destDir, rel);
-        Directory.CreateDirectory(dst);
-      }
 
-      foreach (string file in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories)) {
-        string rel = Path.GetRelativePath(sourceDir, file);
-        string dst = Path.Combine(destDir, rel);
-        Directory.CreateDirectory(Path.GetDirectoryName(dst)!);
-        File.Copy(file, dst, true);
-      }
-    }
+        // Chooses per-game hotkey if set, else global, and only re-registers when it changes
+        private void EnsureHotkeyRegistered(GameProfile? profile)
+        {
+            uint mods = config.HotkeyModifiers;
+            uint key = config.HotkeyKey;
 
+            if (profile != null && profile.HotkeyKey != 0)
+            {
+                mods = profile.HotkeyModifiers;
+                key = profile.HotkeyKey;
+            }
 
-    private static bool ProcessByIdExists(uint pid) {
-      if (pid == 0) return false;
+            if (mods == registeredMods && key == registeredKey)
+                return;
 
-      try {
-        using (var p = Process.GetProcessById((int)pid)) {
-          return !p.HasExited;
+            host?.RegisterHotkey(mods, key, showError: false);
+            registeredMods = mods;
+            registeredKey = key;
         }
-      } catch {
-        return false;
-      }
-    }
 
-    private void PollForegroundGame() {
-      if (trackedGameProfile != null && trackedGamePid != 0) {
-        if (!ProcessByIdExists(trackedGamePid)) {
-          var exitedProfile = trackedGameProfile;
+        private static void TryApplyStartupSetting(bool enabled)
+        {
+            const string runKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
+            const string valueName = "LightFlip";
 
-          trackedGamePid = 0;
-          trackedGameProfile = null;
+            try
+            {
+                using var key = Registry.CurrentUser.CreateSubKey(runKeyPath, writable: true);
+                if (key == null) return;
 
-          activePid = 0;
-          activeExePath = string.Empty;
-          activeProcessName = string.Empty;
-          activeProfile = null;
+                if (enabled)
+                {
+                    string appDir = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                        "LightFlip");
 
-          if (exitedProfile != null && exitedProfile.RevertOnClose) {
+                    Directory.CreateDirectory(appDir);
+
+                    string sourceDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
+                    string targetExe = Path.Combine(appDir, "LightFlip.exe");
+
+                    if (!string.Equals(sourceDir, appDir, StringComparison.OrdinalIgnoreCase))
+                    {
+                        CopyDirectory(sourceDir, appDir);
+                    }
+
+                    key.SetValue(valueName, $"\"{targetExe}\"");
+                }
+                else
+                {
+                    if (key.GetValue(valueName) != null)
+                        key.DeleteValue(valueName, throwOnMissingValue: false);
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        private static void CopyDirectory(string sourceDir, string destDir)
+        {
+            foreach (string dir in Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories))
+            {
+                string rel = Path.GetRelativePath(sourceDir, dir);
+                string dst = Path.Combine(destDir, rel);
+                Directory.CreateDirectory(dst);
+            }
+
+            foreach (string file in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
+            {
+                string rel = Path.GetRelativePath(sourceDir, file);
+                string dst = Path.Combine(destDir, rel);
+                Directory.CreateDirectory(Path.GetDirectoryName(dst)!);
+                File.Copy(file, dst, true);
+            }
+        }
+
+        private static bool ProcessByIdExists(uint pid)
+        {
+            if (pid == 0) return false;
+
+            try
+            {
+                using (var p = Process.GetProcessById((int)pid))
+                {
+                    return !p.HasExited;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void PollForegroundGame()
+        {
+            // If a tracked game exited, revert if requested and reset tracking
+            if (trackedGameProfile != null && trackedGamePid != 0)
+            {
+                if (!ProcessByIdExists(trackedGamePid))
+                {
+                    var exitedProfile = trackedGameProfile;
+
+                    trackedGamePid = 0;
+                    trackedGameProfile = null;
+                    trackedGameHadFocus = false;
+
+                    activePid = 0;
+                    activeExePath = string.Empty;
+                    activeProcessName = string.Empty;
+                    activeProfile = null;
+
+                    if (exitedProfile != null && exitedProfile.RevertOnClose)
+                    {
+                        try { GammaRamp.ApplyToNeutralAll(); } catch { }
+                    }
+
+                    // If no game is active anymore, revert hotkey to global
+                    EnsureHotkeyRegistered(null);
+
+                    UpdateTrayText();
+                    return;
+                }
+            }
+
+            IntPtr hwnd = NativeMethods.GetForegroundRootWindowSafe();
+            uint pid = NativeMethods.GetForegroundRootProcessId();
+            if (pid == 0 || hwnd == IntPtr.Zero)
+                return;
+
+            try
+            {
+                if (Process.GetCurrentProcess().Id == (int)pid)
+                    return;
+            }
+            catch { }
+
+            string? exe = NativeMethods.TryGetProcessImagePath(pid);
+            string? procName = NativeMethods.TryGetProcessName(pid);
+
+            string exeSafe = exe ?? string.Empty;
+            string procNameSafe = procName ?? string.Empty;
+
+            if (pid == activePid &&
+                string.Equals(exeSafe, activeExePath, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(procNameSafe, activeProcessName, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            activePid = pid;
+            activeExePath = exeSafe;
+            activeProcessName = procNameSafe;
+
+            var found = FindProfileByExeOrProcessName(exeSafe, procNameSafe);
+
+            // NEW: If we switched away from the tracked game (Alt+Tab / focus loss),
+            // revert gamma immediately (if enabled).
+            if (trackedGameProfile != null && trackedGamePid != 0)
+            {
+                bool nowFocusedIsTracked = (pid == trackedGamePid);
+
+                // ✅ More robust: revert whenever we are no longer focused on the tracked game
+                // (doesn't depend on trackedGameHadFocus being true)
+                if (!nowFocusedIsTracked)
+                {
+                    if (trackedGameProfile.RevertOnClose)
+                    {
+                        try { GammaRamp.ApplyToNeutralAll(); } catch { }
+                    }
+                }
+
+                trackedGameHadFocus = nowFocusedIsTracked;
+            }
+
+            if (found != null)
+            {
+                activeProfile = found;
+                trackedGamePid = pid;
+                trackedGameProfile = found;
+                trackedGameHadFocus = true;
+
+                // Register the per-game hotkey (if set) for this active profile
+                EnsureHotkeyRegistered(activeProfile);
+
+                try
+                {
+                    var p = activeProfile.LastBright ? activeProfile.Bright : activeProfile.Normal;
+                    GammaRamp.ApplyForWindow(hwnd, p);
+                }
+                catch { }
+            }
+            else
+            {
+                activeProfile = null;
+
+                // No active profile -> revert to global hotkey
+                EnsureHotkeyRegistered(null);
+            }
+
+            UpdateTrayText();
+        }
+
+        private GameProfile? FindProfileByExe(string exePath)
+        {
+            if (string.IsNullOrWhiteSpace(exePath))
+                return null;
+
+            string normExe = NormalizeExePath(exePath);
+
+            return config.Games.FirstOrDefault(g =>
+                !string.IsNullOrWhiteSpace(g.ExePath) &&
+                string.Equals(NormalizeExePath(g.ExePath), normExe, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private GameProfile? FindProfileByExeOrProcessName(string? exePath, string? processName)
+        {
+            // Prefer full path match when available (most precise).
+            if (!string.IsNullOrWhiteSpace(exePath))
+            {
+                var byExe = FindProfileByExe(exePath);
+                if (byExe != null)
+                    return byExe;
+            }
+
+            // Fallback: process name match (needed for games that block QueryFullProcessImageName/OpenProcess).
+            if (!string.IsNullOrWhiteSpace(processName))
+            {
+                string pn = processName.Trim().Trim('"');
+                try { pn = Path.GetFileNameWithoutExtension(pn); } catch { }
+
+                if (!string.IsNullOrWhiteSpace(pn))
+                {
+                    return config.Games.FirstOrDefault(g =>
+                        !string.IsNullOrWhiteSpace(g.ExePath) &&
+                        string.Equals(Path.GetFileNameWithoutExtension(g.ExePath), pn, StringComparison.OrdinalIgnoreCase));
+                }
+            }
+
+            return null;
+        }
+
+private static string NormalizeExePath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return string.Empty;
+
+            try
+            {
+                return Path.GetFullPath(path.Trim().Trim('"'));
+            }
+            catch
+            {
+                return path.Trim().Trim('"');
+            }
+        }
+
+        private void ToggleForActiveGame()
+        {
+            if (activeProfile == null)
+            {
+                return;
+            }
+
+            trackedGameProfile = activeProfile;
+            trackedGamePid = activePid;
+            trackedGameHadFocus = true;
+
+            activeProfile.LastBright = !activeProfile.LastBright;
+
+            try { config.Save(); } catch { }
+
+            IntPtr hwnd = NativeMethods.GetForegroundWindowSafe();
+            try
+            {
+                var p = activeProfile.LastBright ? activeProfile.Bright : activeProfile.Normal;
+                GammaRamp.ApplyForWindow(hwnd, p);
+            }
+            catch { }
+
+            if (tray != null)
+            {
+                tray.BalloonTipTitle = "LightFlip";
+                tray.BalloonTipText = activeProfile.LastBright ? "Bright profile ON" : "Bright profile OFF";
+                tray.ShowBalloonTip(700);
+            }
+
+            UpdateTrayText();
+        }
+
+        private void ShowSettings()
+        {
+            if (settingsForm != null && !settingsForm.IsDisposed)
+            {
+                settingsForm.Show();
+                settingsForm.WindowState = FormWindowState.Normal;
+                settingsForm.BringToFront();
+                return;
+            }
+
+            settingsForm = new Form1(config);
+            settingsForm.ConfigApplied += (s, cfg) =>
+            {
+                config = cfg;
+
+                TryApplyStartupSetting(config.StartWithWindows);
+
+                // IMPORTANT: The settings form passes us a *new* AppConfig instance.
+                // If the foreground game hasn't changed, PollForegroundGame() may early-return
+                // (pid/exe/name unchanged) and keep using the old GameProfile instance.
+                // That makes newly saved slider values appear to "do nothing" until you alt-tab.
+                // Reset cached foreground state so we re-resolve the active profile immediately.
+                activePid = 0;
+                activeExePath = string.Empty;
+                activeProcessName = string.Empty;
+                activeProfile = null;
+                trackedGamePid = 0;
+                trackedGameProfile = null;
+                trackedGameHadFocus = false;
+
+                // Force a refresh/apply right away.
+                PollForegroundGame();
+
+                // Re-register based on current active profile (per-game override if present)
+                EnsureHotkeyRegistered(activeProfile);
+
+                UpdateTrayText();
+            };
+
+            settingsForm.FormClosing += (s, e) =>
+            {
+                if (config.MinimizeToTray && !settingsForm!.AllowHardClose)
+                {
+                    e.Cancel = true;
+                    settingsForm.Hide();
+                }
+            };
+
+            settingsForm.Show();
+        }
+
+        private void UpdateTrayText()
+        {
+            if (tray == null) return;
+
+            // Show the effective hotkey (per-game if active, else global)
+            uint mods = config.HotkeyModifiers;
+            uint key = config.HotkeyKey;
+
+            if (activeProfile != null && activeProfile.HotkeyKey != 0)
+            {
+                mods = activeProfile.HotkeyModifiers;
+                key = activeProfile.HotkeyKey;
+            }
+
+            string hk = HotkeyText.Format(mods, key);
+
+            if (activeProfile != null)
+            {
+                string mode = activeProfile.LastBright ? "BRIGHT" : "NORMAL";
+
+                string name = "";
+                try
+                {
+                    name = !string.IsNullOrWhiteSpace(activeProfile.DisplayName)
+                        ? activeProfile.DisplayName
+                        : Path.GetFileNameWithoutExtension(activeProfile.ExePath ?? "");
+                }
+                catch { name = ""; }
+
+                if (string.IsNullOrWhiteSpace(name))
+                    name = "(game)";
+
+                string text = $"LightFlip: {name} {mode} ({hk})";
+                tray.Text = text.Length > 63 ? text.Substring(0, 63) : text;
+            }
+            else
+            {
+                string text = $"LightFlip ({hk})";
+                tray.Text = text.Length > 63 ? text.Substring(0, 63) : text;
+            }
+        }
+
+        private void ExitApp()
+        {
             try { GammaRamp.ApplyToNeutralAll(); } catch { }
-          }
 
-          UpdateTrayText();
-          return;
+            try
+            {
+                pollTimer.Stop();
+                pollTimer.Dispose();
+            }
+            catch { }
+
+            try
+            {
+                if (tray != null)
+                {
+                    tray.Visible = false;
+                    tray.Dispose();
+                    tray = null;
+                }
+            }
+            catch { }
+
+            try
+            {
+                if (host != null)
+                {
+                    host.SafeClose();
+                    host = null;
+                }
+            }
+            catch { }
+
+            try
+            {
+                if (settingsForm != null)
+                {
+                    settingsForm.AllowHardClose = true;
+                    settingsForm.Close();
+                    settingsForm.Dispose();
+                    settingsForm = null;
+                }
+            }
+            catch { }
+
+            ExitThread();
         }
-      }
-
-      IntPtr hwnd = NativeMethods.GetForegroundWindowSafe();
-      uint pid = NativeMethods.GetForegroundProcessId();
-      if (pid == 0 || hwnd == IntPtr.Zero)
-        return;
-
-      try {
-        if (Process.GetCurrentProcess().Id == (int)pid)
-          return;
-      } catch { }
-
-      string? exe = NativeMethods.TryGetProcessImagePath(pid);
-      string? procName = NativeMethods.TryGetProcessName(pid);
-
-      string exeSafe = exe ?? string.Empty;
-      string procNameSafe = procName ?? string.Empty;
-
-      if (pid == activePid &&
-          string.Equals(exeSafe, activeExePath, StringComparison.OrdinalIgnoreCase) &&
-          string.Equals(procNameSafe, activeProcessName, StringComparison.OrdinalIgnoreCase))
-        return;
-
-      activePid = pid;
-      activeExePath = exeSafe;
-      activeProcessName = procNameSafe;
-
-      var found = FindProfileByExeOrProcessName(exeSafe, procNameSafe);
-
-      if (found != null) {
-        activeProfile = found;
-        trackedGamePid = pid;
-        trackedGameProfile = found;
-
-        try {
-          var p = activeProfile.LastBright ? activeProfile.Bright : activeProfile.Normal;
-          GammaRamp.ApplyForWindow(hwnd, p);
-        } catch { }
-      } else {
-        activeProfile = null;
-      }
-
-      UpdateTrayText();
     }
-
-    private GameProfile? FindProfileByExe(string exePath) {
-      if (string.IsNullOrWhiteSpace(exePath))
-        return null;
-
-      string normExe = NormalizeExePath(exePath);
-
-      var exact = config.Games.FirstOrDefault(g =>
-          !string.IsNullOrWhiteSpace(g.ExePath) &&
-          string.Equals(NormalizeExePath(g.ExePath), normExe, StringComparison.OrdinalIgnoreCase));
-
-      if (exact != null)
-        return exact;
-
-      string file = Path.GetFileName(normExe);
-
-      return config.Games.FirstOrDefault(g =>
-          !string.IsNullOrWhiteSpace(g.ExePath) &&
-          string.Equals(Path.GetFileName(NormalizeExePath(g.ExePath)), file, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private GameProfile? FindProfileByExeOrProcessName(string? exePath, string? processName) {
-      if (!string.IsNullOrWhiteSpace(exePath)) {
-        var byExe = FindProfileByExe(exePath);
-        if (byExe != null)
-          return byExe;
-      }
-
-      if (!string.IsNullOrWhiteSpace(processName)) {
-        string pn = processName.Trim().Trim('"');
-        try { pn = Path.GetFileNameWithoutExtension(pn); } catch { }
-
-        if (!string.IsNullOrWhiteSpace(pn)) {
-          return config.Games.FirstOrDefault(g =>
-              !string.IsNullOrWhiteSpace(g.ExePath) &&
-              string.Equals(Path.GetFileNameWithoutExtension(g.ExePath), pn, StringComparison.OrdinalIgnoreCase));
-        }
-      }
-
-      return null;
-    }
-
-    private static string NormalizeExePath(string path) {
-      if (string.IsNullOrWhiteSpace(path))
-        return string.Empty;
-
-      try {
-        return Path.GetFullPath(path.Trim().Trim('"'));
-      } catch {
-        return path.Trim().Trim('"');
-      }
-    }
-
-    private void ToggleForActiveGame() {
-      if (activeProfile == null) {
-        return;
-      }
-
-      trackedGameProfile = activeProfile;
-      trackedGamePid = activePid;
-
-      activeProfile.LastBright = !activeProfile.LastBright;
-
-      try { config.Save(); } catch { }
-
-      IntPtr hwnd = NativeMethods.GetForegroundWindowSafe();
-      try {
-        var p = activeProfile.LastBright ? activeProfile.Bright : activeProfile.Normal;
-        GammaRamp.ApplyForWindow(hwnd, p);
-      } catch { }
-
-      if (tray != null) {
-        tray.BalloonTipTitle = "LightFlip";
-        tray.BalloonTipText = activeProfile.LastBright ? "Bright profile ON" : "Bright profile OFF";
-        tray.ShowBalloonTip(700);
-      }
-
-      UpdateTrayText();
-    }
-
-    private void ShowSettings() {
-      if (settingsForm != null && !settingsForm.IsDisposed) {
-        settingsForm.Show();
-        settingsForm.WindowState = FormWindowState.Normal;
-        settingsForm.BringToFront();
-        return;
-      }
-
-      settingsForm = new Form1(config);
-      settingsForm.ConfigApplied += (s, cfg) => {
-        config = cfg;
-
-        TryApplyStartupSetting(config.StartWithWindows);
-
-        host?.RegisterHotkey(config.HotkeyModifiers, config.HotkeyKey, showError: true);
-
-        UpdateTrayText();
-      };
-
-      settingsForm.FormClosing += (s, e) => {
-        if (config.MinimizeToTray && !settingsForm!.AllowHardClose) {
-          e.Cancel = true;
-          settingsForm.Hide();
-        }
-      };
-
-      settingsForm.Show();
-    }
-
-    private void UpdateTrayText() {
-      if (tray == null) return;
-
-      string hk = HotkeyText.Format(config.HotkeyModifiers, config.HotkeyKey);
-
-      if (activeProfile != null) {
-        string mode = activeProfile.LastBright ? "BRIGHT" : "NORMAL";
-
-        string name = "";
-        try {
-          name = !string.IsNullOrWhiteSpace(activeProfile.DisplayName)
-              ? activeProfile.DisplayName
-              : Path.GetFileNameWithoutExtension(activeProfile.ExePath ?? "");
-        } catch { name = ""; }
-
-        if (string.IsNullOrWhiteSpace(name))
-          name = "(game)";
-
-        string text = $"LightFlip: {name} {mode} ({hk})";
-        tray.Text = text.Length > 63 ? text.Substring(0, 63) : text;
-      } else {
-        string text = $"LightFlip ({hk})";
-        tray.Text = text.Length > 63 ? text.Substring(0, 63) : text;
-      }
-    }
-
-    private void ExitApp() {
-      try { GammaRamp.ApplyToNeutralAll(); } catch { }
-
-      try {
-        pollTimer.Stop();
-        pollTimer.Dispose();
-      } catch { }
-
-      try {
-        if (tray != null) {
-          tray.Visible = false;
-          tray.Dispose();
-          tray = null;
-        }
-      } catch { }
-
-      try {
-        if (host != null) {
-          host.SafeClose();
-          host = null;
-        }
-      } catch { }
-
-      try {
-        if (settingsForm != null) {
-          settingsForm.AllowHardClose = true;
-          settingsForm.Close();
-          settingsForm.Dispose();
-          settingsForm = null;
-        }
-      } catch { }
-
-      ExitThread();
-    }
-  }
 }

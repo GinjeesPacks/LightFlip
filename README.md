@@ -5,7 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/n8WnKWMzhJ)
 
-LightFlip is a lightweight Windows tray utility that lets you **instantly switch display color/brightness profiles per game or app** using a global hotkey. It detects the active foreground application and applies the matching display gamma/color profile in real time — no monitor OSD or GPU panel tweaking required.
+LightFlip is a lightweight Windows tray utility that lets you **instantly switch display gamma, brightness, contrast, and color temperature profiles per game or app** using a global or per-game hotkey.
+
+It detects the active foreground application and applies the matching display gamma ramp in real time — no monitor OSD or GPU control panel tweaking required.
 
 Built for fast runtime switching, per-game presets, and zero workflow interruption.
 
@@ -13,39 +15,53 @@ Built for fast runtime switching, per-game presets, and zero workflow interrupti
 
 ## ✨ Features
 
-- 🎮 **Per-Game Profiles** — Create custom color/gamma profiles for specific executables
+- 🎮 **Per-Game Profile Catalog** — Create custom gamma / brightness / contrast / temperature profiles per executable
 - ⚡ **Global Hotkey Toggle** — Switch profiles instantly while in-game or in-app
-- 🖥 **Foreground App Detection** — Automatically matches the active window to a saved profile
-- 🌙 **Gamma / Color Ramp Control** — Adjusts display output at the system level
+- 🎯 **Per-Game Hotkey Override** — Assign a custom hotkey for specific games that overrides the global hotkey while that game is active
+- 🖥 **Foreground App Detection** — Matches the active window to a saved profile using executable path with process-name fallback for protected games
+- 🌙 **Gamma Ramp Control** — Applies gamma ramp changes at the Windows display LUT level
+- 🎚 **Brightness / Contrast / Temperature Adjustments** — Incorporated into the generated gamma ramp
 - 📌 **System Tray App** — Runs quietly in the tray with quick access menu
-- 🚀 **Start With Windows (Optional)** — Launch automatically on login
-- 🗕 **Minimize to Tray** — No taskbar clutter
-- 🔄 **Revert on Close (Per Game Option)** — Restore neutral display settings when the app closes
+- 🚀 **Start With Windows (Optional)** — Launch automatically on login via user startup entry
+- 🗕 **Minimize to Tray** — No taskbar clutter during normal use
+- 🔄 **Revert When Inactive (Per Profile Option)** — Restores captured baseline display ramp when a profile deactivates or the app exits
+- 🖥 **Multi-Monitor Aware** — Attempts to target the display containing the active window, with fallback to all displays if needed
 
 ---
 
 ## 🧠 How It Works
 
-LightFlip monitors the **currently focused window**. When that window belongs to a configured game/app profile, LightFlip can apply a custom display gamma/color ramp to your monitor.
+LightFlip continuously monitors the **currently focused window**.
 
-When you press your configured **global hotkey**, LightFlip toggles between:
+When that window belongs to a configured game/app profile, LightFlip applies that profile’s gamma ramp settings.
 
-- Your saved profile for that game/app
-- A neutral/default display profile
+Each profile contains two runtime states:
 
-All changes happen live and system-wide using Windows display gamma APIs.
+- **Normal profile**
+- **Bright profile**
+
+When you press the active hotkey, LightFlip toggles between the Normal and Bright profiles for the active game/app.
+
+If **Revert When Inactive** is enabled for that profile, LightFlip restores your captured baseline gamma ramp when the game loses focus, the profile deactivates, or the app exits.
+
+All changes are applied live using the Windows `SetDeviceGammaRamp` API.
 
 ---
 
-## ⌨️ Hotkey (Runtime Toggle)
+## ⌨️ Hotkeys (Runtime Toggle)
 
-You can configure a global hotkey inside **Settings**.
+You can configure:
 
-**At runtime:**
+- A **global hotkey**
+- Optional **per-game hotkey overrides**
 
-- Press your hotkey → toggles the profile for the active game/app
-- Works even when the game is fullscreen (borderless/windowed works best)
-- Hotkey is registered globally — no need to focus LightFlip
+Runtime behavior:
+
+- If no per-game hotkey is set → the global hotkey is used
+- If a per-game hotkey is set → it is automatically registered while that game is active
+- Hotkey toggles between the profile’s Normal and Bright states
+- Hotkeys are registered globally — LightFlip does not need focus
+- Borderless/windowed modes are most reliable for runtime switching
 
 ---
 
@@ -53,7 +69,8 @@ You can configure a global hotkey inside **Settings**.
 
 ### 1️⃣ Run LightFlip
 
-Launch `LightFlip.exe`. The app starts in the system tray.
+Launch `LightFlip.exe`.  
+The app starts in the system tray.
 
 Double-click the tray icon or right-click → **Settings**.
 
@@ -65,20 +82,22 @@ In Settings:
 
 1. Click **Browse**
 2. Select the game/app `.exe`
-3. Adjust the color/gamma profile values
-4. Save the profile
+3. Adjust gamma / brightness / contrast / temperature
+4. Configure Normal and Bright profile values
+5. Optionally set a per-game hotkey override
+6. Save the profile
 
-Options available per profile:
+Per-profile options include:
 
-- Revert on close
-- Custom color profile
-- Toggle behavior
+- Revert when inactive
+- Per-game hotkey override
+- Normal vs Bright profile tuning
 
 ---
 
 ### 3️⃣ Configure App Behavior (Optional)
 
-In Settings menu:
+In Settings:
 
 - ✅ Start with Windows
 - ✅ Start minimized
@@ -92,25 +111,35 @@ Right-click the tray icon:
 
 - **Toggle** — Toggle active profile immediately
 - **Settings** — Open configuration window
-- **Exit** — Close LightFlip
+- **Exit** — Close LightFlip and restore baseline gamma ramp
 
 ---
 
 ## 🖥 Multi-Monitor Behavior
 
-LightFlip attempts to apply the profile to:
+LightFlip attempts to apply the gamma ramp to:
 
 - The monitor containing the active window
-- Falls back to all active displays if needed
+- Falls back to all active displays if a specific monitor device context cannot be obtained
 
 ---
 
 ## 🔒 Safety Notes
 
 - LightFlip changes **display gamma ramps only**
-- No driver or hardware modification
+- No monitor hardware settings are modified
+- No driver configuration is changed
 - Startup entry is optional and user-controlled
-- Neutral profile can always be restored
+- Baseline gamma ramp is captured and restored when profiles deactivate or the app exits
+
+---
+
+## ⚠️ Compatibility Notes
+
+- Borderless and windowed fullscreen modes are most reliable
+- Some exclusive fullscreen games may ignore gamma ramp changes
+- Windows HDR mode can reduce or override gamma ramp effects
+- GPU driver color controls may override gamma ramp behavior
 
 ---
 
@@ -136,7 +165,3 @@ LightFlip source code is licensed under the MIT License.
 
 The LightFlip name, icon, and branding assets are not covered by the MIT License and may not be reused without permission.  
 Copyright © 2026 Caleb Cook.
-
-
-
-
