@@ -159,6 +159,14 @@ Join the GinjeesPacks Discord for support, updates, and releases.
 
 ---
 
+## ☕ Support
+
+If this project helps you, consider supporting my future updates and developement projects.
+
+https://ko-fi.com/ginjeespacks
+
+---
+
 ## License
 
 LightFlip source code is licensed under the MIT License.
